@@ -1,0 +1,32 @@
+{
+  "name": "rediscope",
+  "version": "1.0.0-beta.0",
+  "description": "Redis persistence and runtime inspection toolkit",
+  "bin": {
+    "rediscope": "bin/rediscope.js"
+  },
+  "scripts": {
+    "build": "go build -buildvcs=false -o dist/rediscope ./cmd/rediscope",
+    "test": "go test ./...",
+    "prepack": "npm run build",
+    "pack:local": "npm pack"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "prebuilds/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "redis",
+    "rdb",
+    "debugging",
+    "persistence",
+    "byte-viewer"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

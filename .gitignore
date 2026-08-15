@@ -1,0 +1,19 @@
+# Local dependencies and package output
+node_modules/
+*.tgz
+
+# Build output. npm publish/pack regenerates this with the prepack script.
+dist/
+
+# Generated viewer output and local lab corpora.
+.rediscope/
+lab_artifacts/
+fixtures/generated/
+
+# Test and coverage output
+coverage/
+*.coverprofile
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
