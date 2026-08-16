@@ -4,6 +4,7 @@ node_modules/
 
 # Build output. npm publish/pack regenerates this with the prepack script.
 dist/
+prebuilds/
 
 # Generated viewer output and local lab corpora.
 .rediscope/

@@ -1,6 +1,6 @@
 {
   "name": "rediscope",
-  "version": "1.0.0-beta.0",
+  "version": "1.0.0-beta.1",
   "description": "Redis persistence and runtime inspection toolkit",
   "bin": {
     "rediscope": "bin/rediscope.js"
