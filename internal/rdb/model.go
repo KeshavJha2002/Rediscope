@@ -1,13 +1,55 @@
 package rdb
 
 type FileModel struct {
-	Name     string      `json:"name"`
-	Path     string      `json:"path"`
-	Size     int         `json:"size"`
-	Version  string      `json:"version"`
-	Hex      string      `json:"hex"`
-	Sections []Section   `json:"sections"`
-	Keys     []KeyRecord `json:"keys"`
+	ID         string        `json:"id"`
+	Name       string        `json:"name"`
+	Path       string        `json:"path"`
+	Bytes      int           `json:"bytes"`
+	Version    string        `json:"version"`
+	RawVersion string        `json:"rawVersion,omitempty"`
+	CountLabel string        `json:"countLabel"`
+	Hex        string        `json:"hex"`
+	Groups     []RecordGroup `json:"groups"`
+
+	// Internal fields omitted from JSON to keep index.html lightweight
+	Size     int         `json:"-"`
+	Sections []Section   `json:"-"`
+	Keys     []KeyRecord `json:"-"`
+}
+
+type RecordGroup struct {
+	Title   string   `json:"title"`
+	Records []Record `json:"records"`
+}
+
+type Record struct {
+	ID       string         `json:"id"`
+	Start    int            `json:"start"`
+	End      int            `json:"end"`
+	Label    string         `json:"label"`
+	Type     string         `json:"type"`
+	RDBType  string         `json:"rdbType,omitempty"`
+	Color    string         `json:"color"`
+	Value    string         `json:"value"`
+	JSON     string         `json:"json,omitempty"`
+	Encoding string         `json:"encoding"`
+	Size     string         `json:"size"`
+	Summary  string         `json:"summary"`
+	Parts    []RecordPart   `json:"parts,omitempty"`
+	Strings  []RecordString `json:"strings,omitempty"`
+}
+
+type RecordPart struct {
+	Kind  string `json:"kind"` // "type", "key", "value"
+	Start int    `json:"start"`
+	End   int    `json:"end"`
+}
+
+type RecordString struct {
+	Kind  string `json:"kind"` // "key", "value"
+	Start int    `json:"start"`
+	End   int    `json:"end"`
+	Text  string `json:"text"`
 }
 
 type Section struct {

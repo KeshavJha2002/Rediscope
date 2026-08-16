@@ -19,13 +19,27 @@ func (r *reader) remaining() int {
 	return len(r.data) - r.pos
 }
 
-func (r *reader) err(message string) error {
-	return fmt.Errorf("rdb offset %d: %s", r.pos, message)
+func (r *reader) err(message string, errs ...error) error {
+	var cause error
+	if len(errs) > 0 {
+		cause = errs[0]
+	} else {
+		cause = ErrCorruptPayload
+	}
+	return &ParseError{
+		Offset:  r.pos,
+		Message: message,
+		Err:     cause,
+	}
 }
 
 func (r *reader) readByte() (byte, error) {
 	if r.remaining() < 1 {
-		return 0, r.err("unexpected eof")
+		return 0, &ParseError{
+			Offset:  r.pos,
+			Message: "unexpected eof reading byte",
+			Err:     ErrTruncated,
+		}
 	}
 	v := r.data[r.pos]
 	r.pos++
@@ -50,7 +64,7 @@ func (r *reader) readLength() (uint64, bool, error) {
 	case 2:
 		if first&0x3F == 0 {
 			if r.remaining() < 4 {
-				return 0, false, r.err("truncated 32-bit length")
+				return 0, false, r.err("truncated 32-bit length", ErrTruncated)
 			}
 			v := binary.BigEndian.Uint32(r.data[r.pos : r.pos+4])
 			r.pos += 4
@@ -58,17 +72,17 @@ func (r *reader) readLength() (uint64, bool, error) {
 		}
 		if first&0x3F == 1 {
 			if r.remaining() < 8 {
-				return 0, false, r.err("truncated 64-bit length")
+				return 0, false, r.err("truncated 64-bit length", ErrTruncated)
 			}
 			v := binary.BigEndian.Uint64(r.data[r.pos : r.pos+8])
 			r.pos += 8
 			return v, false, nil
 		}
-		return 0, false, r.err("unknown extended length encoding")
+		return 0, false, r.err("unknown extended length encoding", ErrCorruptPayload)
 	case 3:
 		return uint64(first & 0x3F), true, nil
 	default:
-		return 0, false, r.err("invalid length")
+		return 0, false, r.err("invalid length mode", ErrCorruptPayload)
 	}
 }
 
@@ -80,7 +94,7 @@ func (r *reader) readString() (string, int, int, error) {
 	}
 	if !encoded {
 		if length > uint64(r.remaining()) {
-			return "", start, r.pos, r.err("truncated string")
+			return "", start, r.pos, r.err("truncated string", ErrTruncated)
 		}
 		bodyStart := r.pos
 		r.pos += int(length)
@@ -96,14 +110,14 @@ func (r *reader) readString() (string, int, int, error) {
 		return fmt.Sprintf("%d", int8(v)), start, r.pos, nil
 	case lenEncInt16:
 		if r.remaining() < 2 {
-			return "", start, r.pos, r.err("truncated int16 string")
+			return "", start, r.pos, r.err("truncated int16 string", ErrTruncated)
 		}
 		v := int16(binary.LittleEndian.Uint16(r.data[r.pos : r.pos+2]))
 		r.pos += 2
 		return fmt.Sprintf("%d", v), start, r.pos, nil
 	case lenEncInt32:
 		if r.remaining() < 4 {
-			return "", start, r.pos, r.err("truncated int32 string")
+			return "", start, r.pos, r.err("truncated int32 string", ErrTruncated)
 		}
 		v := int32(binary.LittleEndian.Uint32(r.data[r.pos : r.pos+4]))
 		r.pos += 4
@@ -118,12 +132,12 @@ func (r *reader) readString() (string, int, int, error) {
 			return "", start, r.pos, err
 		}
 		if compressedLen > uint64(r.remaining()) {
-			return "", start, r.pos, r.err("truncated lzf string")
+			return "", start, r.pos, r.err("truncated lzf string", ErrTruncated)
 		}
 		r.pos += int(compressedLen)
 		return "<lzf>", start, r.pos, nil
 	default:
-		return "", start, r.pos, r.err("unknown encoded string")
+		return "", start, r.pos, r.err("unknown encoded string", ErrCorruptPayload)
 	}
 }
 
@@ -134,7 +148,7 @@ func (r *reader) skipString() (int, int, error) {
 
 func (r *reader) skipBytes(n int) error {
 	if n < 0 || n > r.remaining() {
-		return r.err("truncated raw bytes")
+		return r.err("truncated raw bytes", ErrTruncated)
 	}
 	r.pos += n
 	return nil
@@ -166,11 +180,21 @@ func (r *reader) skipSignedInteger() error {
 func (r *reader) readKeyRecord(db int, typ byte, recordStart int, expiry *int64) (KeyRecord, error) {
 	key, keyStart, keyEnd, err := r.readString()
 	if err != nil {
-		return KeyRecord{}, err
+		return KeyRecord{}, &ParseError{
+			Offset:  keyStart,
+			Opcode:  typ,
+			Message: "failed to read key name",
+			Err:     err,
+		}
 	}
 	valueStart := r.pos
 	if err := r.skipValue(typ); err != nil {
-		return KeyRecord{}, fmt.Errorf("key %q type %s at offset %d: %w", key, TypeName(typ), valueStart, err)
+		return KeyRecord{}, &ParseError{
+			Offset:  valueStart,
+			Opcode:  typ,
+			Message: fmt.Sprintf("failed to parse value for key %q (type: %s, opcode: 0x%02x)", key, TypeName(typ), typ),
+			Err:     err,
+		}
 	}
 	valueEnd := r.pos
 	return KeyRecord{
@@ -199,6 +223,9 @@ func (r *reader) skipValue(typ byte) error {
 		if err != nil {
 			return err
 		}
+		if count > uint64(r.remaining()) {
+			return r.err(fmt.Sprintf("element count %d exceeds remaining bytes %d", count, r.remaining()), ErrTruncated)
+		}
 		for i := uint64(0); i < count; i++ {
 			if _, _, err := r.skipString(); err != nil {
 				return err
@@ -224,6 +251,9 @@ func (r *reader) skipValue(typ byte) error {
 		if err != nil {
 			return err
 		}
+		if nodeCount > uint64(r.remaining()) {
+			return r.err(fmt.Sprintf("node count %d exceeds remaining bytes %d", nodeCount, r.remaining()), ErrTruncated)
+		}
 		for i := uint64(0); i < nodeCount; i++ {
 			if _, _, err := r.skipString(); err != nil {
 				return err
@@ -234,6 +264,9 @@ func (r *reader) skipValue(typ byte) error {
 		nodeCount, _, err := r.readLength()
 		if err != nil {
 			return err
+		}
+		if nodeCount > uint64(r.remaining()) {
+			return r.err(fmt.Sprintf("quicklist2 node count %d exceeds remaining bytes %d", nodeCount, r.remaining()), ErrTruncated)
 		}
 		for i := uint64(0); i < nodeCount; i++ {
 			if _, _, err := r.readLength(); err != nil {
@@ -300,7 +333,7 @@ func (r *reader) skipValue(typ byte) error {
 		_, _, err := r.readLength()
 		return err
 	default:
-		return r.err(fmt.Sprintf("unsupported RDB value type 0x%02x", typ))
+		return r.err(fmt.Sprintf("unsupported RDB value type 0x%02x", typ), ErrUnsupportedType)
 	}
 }
 
@@ -470,7 +503,7 @@ func (r *reader) skipArray() error {
 			return err
 		}
 	} else if insertFlag != 0 {
-		return r.err("invalid array insert index flag")
+		return r.err("invalid array insert index flag", ErrCorruptPayload)
 	}
 	for i := uint64(0); i < count; i++ {
 		if _, _, err := r.readLength(); err != nil {
@@ -494,7 +527,7 @@ func (r *reader) skipArray() error {
 				return err
 			}
 		default:
-			return r.err(fmt.Sprintf("unknown array element tag %d", tag))
+			return r.err(fmt.Sprintf("unknown array element tag %d", tag), ErrCorruptPayload)
 		}
 	}
 	return nil
@@ -521,7 +554,7 @@ func (r *reader) skipTemplateArray(ref bool) error {
 		}
 		count, ok := r.templateFields[templateID]
 		if !ok {
-			return r.err(fmt.Sprintf("template-array-ref missing template id %d", templateID))
+			return r.err(fmt.Sprintf("template-array-ref missing template id %d", templateID), ErrCorruptPayload)
 		}
 		for i := uint64(0); i < count; i++ {
 			if _, _, err := r.skipString(); err != nil {
@@ -568,7 +601,7 @@ func (r *reader) skipModulePayload() error {
 				return err
 			}
 		default:
-			return r.err(fmt.Sprintf("unknown module payload opcode %d", opcode))
+			return r.err(fmt.Sprintf("unknown module payload opcode %d", opcode), ErrCorruptPayload)
 		}
 	}
 }

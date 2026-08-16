@@ -77,34 +77,34 @@ func TypeName(t byte) string {
 
 func EncodingName(t byte) string {
 	names := map[byte]string{
-		0:  "string",
+		0:  "embstr",
 		1:  "list",
 		2:  "set",
 		3:  "zset",
 		4:  "hash",
 		5:  "zset",
 		6:  "module-pre-ga",
-		7:  "module",
+		7:  "raw",
 		9:  "zipmap",
 		10: "ziplist",
 		11: "intset",
 		12: "ziplist",
 		13: "ziplist",
 		14: "quicklist-ziplist",
-		15: "stream-listpacks",
+		15: "stream",
 		16: "listpack",
 		17: "listpack",
 		18: "quicklist",
-		19: "stream-listpacks",
+		19: "stream",
 		20: "listpack",
-		21: "stream-listpacks",
+		21: "stream",
 		22: "hash-metadata",
 		23: "listpack-ex",
 		24: "hash-metadata",
 		25: "listpack-ex",
-		26: "stream-listpacks",
-		27: "stream-listpacks",
-		28: "array",
+		26: "stream",
+		27: "stream",
+		28: "sliced-array",
 		29: "template-listpack",
 		30: "template-listpack-ref",
 		31: "template-array",
@@ -115,4 +115,66 @@ func EncodingName(t byte) string {
 		return name
 	}
 	return "unknown"
+}
+
+func GeneralType(t byte, key string) string {
+	switch t {
+	case 0:
+		if len(key) > 4 && key[len(key)-4:] == ":hll" {
+			return "hll"
+		}
+		if len(key) > 7 && key[len(key)-7:] == ":bitmap" {
+			return "string"
+		}
+		if len(key) > 9 && key[len(key)-9:] == ":bitfield" {
+			return "string"
+		}
+		return "string"
+	case 1, 10, 14, 18:
+		return "list"
+	case 2, 11, 20:
+		return "set"
+	case 3, 5, 12, 17:
+		return "zset"
+	case 4, 9, 13, 16, 22, 23, 24, 25, 29, 30, 31, 32:
+		return "hash"
+	case 15, 19, 21, 26, 27:
+		return "stream"
+	case 28:
+		return "array"
+	case 6, 7:
+		return "module"
+	case 33:
+		return "gcra"
+	default:
+		return "unknown"
+	}
+}
+
+func TypeColor(t byte, key string) string {
+	switch t {
+	case 0:
+		if len(key) > 4 && key[len(key)-4:] == ":hll" {
+			return "var(--hll)"
+		}
+		return "var(--string)"
+	case 1, 10, 14, 18:
+		return "var(--list)"
+	case 2, 11, 20:
+		return "var(--set)"
+	case 3, 5, 12, 17:
+		return "var(--zset)"
+	case 4, 9, 13, 16, 22, 23, 24, 25, 29, 30, 31, 32:
+		return "var(--hash)"
+	case 15, 19, 21, 26, 27:
+		return "var(--stream)"
+	case 28:
+		return "var(--array)"
+	case 6, 7:
+		return "var(--stream)"
+	case 33:
+		return "var(--db)"
+	default:
+		return "var(--string)"
+	}
 }

@@ -1,8 +1,8 @@
 # rediscope
 
-Redis inspection toolkit for persistence files and, later, live Redis runtime views.
+Redis inspection toolkit for persistence files and live Redis runtime views.
 
-`v1.0.0-beta.0` ships the RDB vertical: parse one or more `.rdb` files and generate a static byte-level HTML viewer.
+`v1.0.0-beta.0` ships the RDB vertical: parse one or more `.rdb` files (or patterns) and serve an interactive byte-level HTML viewer on localhost.
 
 ## Install
 
@@ -25,31 +25,38 @@ npx rediscope@beta rdb dump.rdb
 ### RDB viewer
 
 ```bash
+# Single file
 rediscope rdb dump.rdb
-rediscope rdb dump-1.rdb dump-2.rdb --out .rediscope/rdb-viewer
+
+# Multiple files or glob patterns
+rediscope rdb test/rdb/*bulk.rdb
+
+# Regex file patterns
+rediscope rdb 'test/rdb/redis-[67]\..*bulk\.rdb'
+
+# Custom output directory and port
+rediscope rdb *rdb --port 8080 --out .rediscope/rdb-viewer
+
+# Headless / static build (no server)
+rediscope rdb dump.rdb --no-serve
 ```
 
-The command parses each file independently, then writes:
-
-```text
-.rediscope/rdb-viewer/index.html
-```
-
-Open that file in a browser. No server is required.
+The command parses each matched file independently, writes `.rediscope/rdb-viewer/index.html`, and spins up a live localhost web server (opening your default browser automatically).
 
 ## Viewer Flow
 
-The generated page has three panes:
+The generated viewer has three panes matching the lab environment:
 
-- Left: RDB file list. Multiple files can be chained in one viewer.
-- Center: parsed RDB structure, including header, AUX fields, database markers, expiry metadata, keys, values, EOF, and checksum.
-- Right: byte view. Key bytes are sky blue, value bytes are light green, and all other bytes are grey.
-
-Clicking a parsed RDB section highlights that exact byte range. Clicking inside the byte view highlights only the contiguous neighboring run with the same byte class.
+- **Left (Files)**: RDB file list. Switch between open files or inspect multi-file runs with active tabs.
+- **Center (Records & Structure)**: Grouped RDB structure:
+  - **File metadata**: Signature header, AUX fields (`redis-ver`, `redis-bits`, `ctime`, `used-mem`, `aof-base`), logical DB selectors, resize hints, slot info, idle/frequency metadata, and templates.
+  - **Key value pairs**: Parsed keys with data types, encodings (`listpack`, `quicklist`, `embstr`, `sliced-array`, `stream`, etc.), sizes, and formatted values.
+  - **Trailer**: EOF opcode and CRC64 checksum.
+- **Right (Byte view)**: 10-column interactive byte grid with color classification (cyan for key bytes, green for value bytes, neutral grey for headers/types/trailer), interactive byte hover tooltips (hex, decimal, ASCII, string segment), record-to-byte range focus with dimming, and contiguous byte run selection.
 
 ## Parser Scope
 
-The parser follows Redis trunk RDB loader structure for the phase-1 byte ranges:
+The parser follows Redis trunk RDB loader structure for phase-1 byte ranges:
 
 - RDB header and version
 - AUX fields
@@ -64,8 +71,6 @@ The parser follows Redis trunk RDB loader structure for the phase-1 byte ranges:
 - module AUX and module values when they use Redis' self-describing module opcodes
 - EOF and checksum
 
-Module payloads remain semantically opaque without the module that produced them. rediscope can preserve byte ranges for self-describing module payloads, but it does not claim to decode module-private meaning.
-
 ## Development
 
 ```bash
@@ -73,11 +78,3 @@ npm run build
 npm test
 npm pack --dry-run
 ```
-
-The npm package includes the Node launcher and the built Go binary. `prepack` runs the Go build so `npm pack` and `npm publish` do not depend on a stale local `dist/` directory.
-
-## Test Data Policy
-
-Keep committed RDB fixtures small and intentional. Good committed fixtures belong under `testdata/rdb/` and should cover parser contracts such as old RDB versions, native types, expiry, stream metadata, checksum handling, and module-opaque payloads.
-
-Keep bulk generated corpora internal or in external artifact storage. Track their Redis version, commit/tag, generation commands, config, expected key count/types, and file hash in a manifest instead of committing every generated binary.
