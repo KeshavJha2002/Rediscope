@@ -1,6 +1,6 @@
 {
   "name": "rediscope",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Interactive byte-level Redis RDB binary decompiler and visual state inspector",
   "bin": {
     "rediscope": "bin/rediscope.js"
