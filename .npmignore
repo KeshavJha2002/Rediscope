@@ -1,0 +1,6 @@
+# Exclude internal source readme variants from published npm tarball
+README.npm.md
+README.github.md
+.github/
+test/
+docs/

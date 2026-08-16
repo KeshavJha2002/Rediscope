@@ -14,7 +14,7 @@ import (
 	"rediscope/internal/viewer"
 )
 
-const Version = "1.0.0-beta.0"
+const Version = "1.0.0"
 
 type App struct{}
 
@@ -73,7 +73,7 @@ func (a *App) runRDB(args []string) (err error) {
 			}
 			outDir = args[i+1]
 			i++
-		case "--port":
+		case "--port", "-p":
 			if i+1 >= len(args) {
 				return errors.New("--port requires a port number")
 			}
@@ -90,8 +90,8 @@ func (a *App) runRDB(args []string) (err error) {
 		default:
 			if strings.HasPrefix(args[i], "--out=") {
 				outDir = strings.TrimPrefix(args[i], "--out=")
-			} else if strings.HasPrefix(args[i], "--port=") {
-				pStr := strings.TrimPrefix(args[i], "--port=")
+			} else if strings.HasPrefix(args[i], "--port=") || strings.HasPrefix(args[i], "-p=") {
+				pStr := strings.TrimPrefix(strings.TrimPrefix(args[i], "--port="), "-p=")
 				p, err := strconv.Atoi(pStr)
 				if err != nil || p < 1 || p > 65535 {
 					return fmt.Errorf("invalid port number %q", pStr)
@@ -99,6 +99,14 @@ func (a *App) runRDB(args []string) (err error) {
 				port = p
 			} else {
 				rawPatterns = append(rawPatterns, args[i])
+			}
+		}
+	}
+
+	if port == 0 {
+		if envPort := os.Getenv("PORT"); envPort != "" {
+			if p, err := strconv.Atoi(envPort); err == nil && p >= 1 && p <= 65535 {
+				port = p
 			}
 		}
 	}
@@ -212,15 +220,20 @@ func ResolveFilePatterns(patterns []string) (resolved []string, err error) {
 			base = pattern
 		}
 
-		// Normalize glob-like wildcards for regex if it looks like a wildcard pattern
-		regexStr := base
-		if strings.HasPrefix(regexStr, "*") {
-			regexStr = "." + regexStr
+		// Try compiling directly as regex or convert glob wildcards
+		var re *regexp.Regexp
+		var reErr error
+
+		if strings.Contains(base, `\`) || strings.Contains(base, "[") || strings.Contains(base, "(") {
+			cleanRegex := strings.TrimPrefix(strings.TrimSuffix(base, "$"), "^")
+			re, reErr = regexp.Compile("^" + cleanRegex + "$")
 		}
-		if strings.HasSuffix(regexStr, "*") && !strings.HasSuffix(regexStr, ".*") && !strings.HasSuffix(regexStr, `\*`) {
-			regexStr = strings.TrimSuffix(regexStr, "*") + ".*"
+		if re == nil || reErr != nil {
+			escaped := regexp.QuoteMeta(base)
+			escaped = strings.ReplaceAll(escaped, `\*`, ".*")
+			escaped = strings.ReplaceAll(escaped, `\?`, ".")
+			re, reErr = regexp.Compile("^" + escaped + "$")
 		}
-		re, reErr := regexp.Compile(regexStr)
 
 		if reErr == nil {
 			entries, readErr := os.ReadDir(searchDir)
@@ -235,20 +248,8 @@ func ResolveFilePatterns(patterns []string) (resolved []string, err error) {
 		}
 
 		// 4. Recursive walk matching (for ** patterns or nested regex matches)
-		if matchedForPattern == 0 {
+		if matchedForPattern == 0 && strings.Contains(pattern, "**") {
 			walkRoot := searchDir
-			if walkRoot == "." && dir != "." && dir != "" {
-				// check if any leading path exists
-				parts := strings.Split(pattern, string(filepath.Separator))
-				for idx, part := range parts {
-					if strings.ContainsAny(part, "*?[]{}") {
-						if idx > 0 {
-							walkRoot = filepath.Join(parts[:idx]...)
-						}
-						break
-					}
-				}
-			}
 			if _, err := os.Stat(walkRoot); err != nil {
 				walkRoot = "."
 			}
@@ -259,12 +260,6 @@ func ResolveFilePatterns(patterns []string) (resolved []string, err error) {
 					if re != nil && (re.MatchString(name) || re.MatchString(p)) {
 						addFile(p)
 						matchedForPattern++
-					} else if strings.HasSuffix(strings.ToLower(name), ".rdb") {
-						// fallback wildcard match if pattern was like *rdb
-						if strings.Contains(pattern, "rdb") {
-							addFile(p)
-							matchedForPattern++
-						}
 					}
 				}
 				return nil

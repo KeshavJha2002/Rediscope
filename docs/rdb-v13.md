@@ -13,8 +13,8 @@
 
 | Type | Hex | Name | Description | Source (define) | Source (handler) |
 |------|-----|------|-------------|-----------------|------------------|
-| 27 | `0x1B` | STREAM_LISTPACKS_5 | Streams with XNACK support (NACKed entry tracking) | [`rdb.h:82`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.h#L82) | [`rdb.c:3873`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.c#L3873) |
-| 28 | `0x1C` | ARRAY | New first-class array data type with tagged elements | [`rdb.h:83`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.h#L83) | [`rdb.c:4393`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.c#L4393) |
+| 27 | `0x1B` | STREAM_LISTPACKS_5 | Streams with XNACK support (NACKed entry tracking) | [`rdb.h:82`](src/rdb.h#L82) | [`rdb.c:3873`](src/rdb.c#L3873) |
+| 28 | `0x1C` | ARRAY | New first-class array data type with tagged elements | [`rdb.h:83`](src/rdb.h#L83) | [`rdb.c:4393`](src/rdb.c#L4393) |
 
 ### New Opcodes
 
@@ -24,13 +24,13 @@ None. Same opcode set as v12 (`0xF3`–`0xFF`).
 
 ### STREAM_LISTPACKS_5 (type 27)
 
-Source: [`src/rdb.c:3873`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.c#L3873) (type dispatch, shared stream loader)
+Source: [`src/rdb.c:3873`](src/rdb.c#L3873) (type dispatch, shared stream loader)
 
 Extends STREAM_LISTPACKS_4 (type 26) with XNACK support — consumer groups can now track NACKed (negatively acknowledged) entries.
 
 ### ARRAY (type 28)
 
-Source: [`src/rdb.c:4393`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.c#L4393) — `rdbtype == RDB_TYPE_ARRAY`
+Source: [`src/rdb.c:4393`](src/rdb.c#L4393) — `rdbtype == RDB_TYPE_ARRAY`
 
 ```
 [element_count: length-encoded]
@@ -39,7 +39,7 @@ Source: [`src/rdb.c:4393`](file:///home/keshav2002latest/dev/redis_lab/redis/src
     [payload: varies by tag]
 ```
 
-Tag definitions from [`src/rdb.h`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.h):
+Tag definitions from [`src/rdb.h`](src/rdb.h):
 
 | Tag | Value | Payload | Size |
 |-----|-------|---------|------|
@@ -56,12 +56,12 @@ Types 0–7, 9–28.
 
 | Feature | Status | Rediscope Source |
 |---------|--------|------------------|
-| Type 27 registered | ✅ | [`types.go:64`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/types.go#L64) |
-| Type 28 registered | ✅ | [`types.go:65`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/types.go#L65) |
-| STREAM_LISTPACKS_5 skipping | ✅ | [`reader.go:340`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/reader.go#L340) `skipStream()` |
-| ARRAY skipping | ✅ | [`reader.go:492`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/reader.go#L492) `skipArray()` |
-| GeneralType mapping | ✅ | [`types.go:143`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/types.go#L143) — type 28 → `"array"` |
-| TypeColor mapping | ✅ | [`types.go:172`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/types.go#L172) — type 28 → `var(--array)` |
+| Type 27 registered | ✅ | [`types.go:64`](../internal/rdb/types.go#L64) |
+| Type 28 registered | ✅ | [`types.go:65`](../internal/rdb/types.go#L65) |
+| STREAM_LISTPACKS_5 skipping | ✅ | [`reader.go:340`](../internal/rdb/reader.go#L340) `skipStream()` |
+| ARRAY skipping | ✅ | [`reader.go:492`](../internal/rdb/reader.go#L492) `skipArray()` |
+| GeneralType mapping | ✅ | [`types.go:143`](../internal/rdb/types.go#L143) — type 28 → `"array"` |
+| TypeColor mapping | ✅ | [`types.go:172`](../internal/rdb/types.go#L172) — type 28 → `var(--array)` |
 
 ## Test Coverage
 

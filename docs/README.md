@@ -6,8 +6,8 @@
 
 All specifications in this documentation are derived from the official Redis source code at commit [`cbdad795d`](https://github.com/redis/redis/commit/cbdad795d8d75746e501aae06f14a3398bd190a2) — specifically:
 
-- [`src/rdb.h`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.h) — Type, opcode, and encoding constant definitions
-- [`src/rdb.c`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.c) — Serialization and deserialization implementation
+- [`src/rdb.h`](src/rdb.h) — Type, opcode, and encoding constant definitions
+- [`src/rdb.c`](src/rdb.c) — Serialization and deserialization implementation
 
 Every architectural claim in these docs is annotated with file:line @ <redis_commit_id> citations.
 
@@ -23,7 +23,7 @@ Every architectural claim in these docs is annotated with file:line @ <redis_com
 | **v14** | 8.8 | `REDIS0014` |
 | **v15** | 8.9+ (trunk) | `REDIS0015` |
 
-Current RDB version: `RDB_VERSION 15` — [`src/rdb.h:21`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.h#L21) @ `cbdad795d`
+Current RDB version: `RDB_VERSION 15` — [`src/rdb.h:21`](src/rdb.h#L21) @ `cbdad795d`
 
 ## Document Index
 

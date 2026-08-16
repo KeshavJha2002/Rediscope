@@ -13,7 +13,7 @@
 
 | Type | Hex | Name | Description | Source (define) | Source (handler) |
 |------|-----|------|-------------|-----------------|------------------|
-| 21 | `0x15` | STREAM_LISTPACKS_3 | Streams with per-consumer active_time and per-group entries_read | [`rdb.h:76`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.h#L76) | [`rdb.c:3871`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.c#L3871) |
+| 21 | `0x15` | STREAM_LISTPACKS_3 | Streams with per-consumer active_time and per-group entries_read | [`rdb.h:76`](src/rdb.h#L76) | [`rdb.c:3871`](src/rdb.c#L3871) |
 
 ### New Opcodes
 
@@ -21,7 +21,7 @@ None. Same opcode set as v10 (`0xF5`–`0xFF`).
 
 ## Value Encoding — STREAM_LISTPACKS_3 (type 21)
 
-Source: [`src/rdb.c:3869–3873`](file:///home/keshav2002latest/dev/redis_lab/redis/src/rdb.c#L3869) (type dispatch, falls into shared stream loader)
+Source: [`src/rdb.c:3869–3873`](src/rdb.c#L3869) (type dispatch, falls into shared stream loader)
 
 Extends `STREAM_LISTPACKS_2` (type 19) with per-consumer tracking in consumer groups:
 
@@ -53,9 +53,9 @@ Types 0–7, 9–21 (everything from v10 plus type 21).
 
 | Feature | Status | Rediscope Source |
 |---------|--------|------------------|
-| Type 21 registered | ✅ | [`types.go:58`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/types.go#L58) |
-| STREAM_LISTPACKS_3 skipping | ✅ | [`reader.go:340`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/reader.go#L340) `skipStream()` — [`reader.go:394`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/reader.go#L394) `skipStreamConsumerGroup()` |
-| GeneralType mapping | ✅ | [`types.go:141`](file:///home/keshav2002latest/dev/redis_lab/rediscope/internal/rdb/types.go#L141) — type 21 → `"stream"` |
+| Type 21 registered | ✅ | [`types.go:58`](../internal/rdb/types.go#L58) |
+| STREAM_LISTPACKS_3 skipping | ✅ | [`reader.go:340`](../internal/rdb/reader.go#L340) `skipStream()` — [`reader.go:394`](../internal/rdb/reader.go#L394) `skipStreamConsumerGroup()` |
+| GeneralType mapping | ✅ | [`types.go:141`](../internal/rdb/types.go#L141) — type 21 → `"stream"` |
 
 ## Test Coverage
 

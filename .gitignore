@@ -6,10 +6,8 @@ node_modules/
 dist/
 prebuilds/
 
-# Generated viewer output and local lab corpora.
+# Generated viewer output
 .rediscope/
-lab_artifacts/
-fixtures/generated/
 
 # Test and coverage output
 coverage/

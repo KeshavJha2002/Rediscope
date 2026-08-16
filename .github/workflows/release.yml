@@ -1,0 +1,86 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Run Test Suite & Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Build Binary
+        run: npm run build
+
+      - name: Run Test Suite
+        run: npm test
+
+      - name: Verify Package Dry-Run
+        run: npm pack --dry-run
+
+  publish-release:
+    name: Create GitHub Release
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Package npm Tarball
+        run: npm pack
+
+      - name: Extract Release Notes from CHANGELOG
+        id: release_notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Extract notes between ## [VERSION] and next ## [ or end of file
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { flag=1; next }
+            flag && /^## \\[/ { flag=0 }
+            flag { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "Release notes for version $VERSION" > RELEASE_NOTES.md
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Rediscope ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            *.tgz
+            prebuilds/darwin-arm64/rediscope
+            prebuilds/darwin-x64/rediscope
+            prebuilds/linux-arm64/rediscope
+            prebuilds/linux-x64/rediscope
+            prebuilds/win32-x64/rediscope.exe
+          draft: false
+          prerelease: false
+          generate_release_notes: true

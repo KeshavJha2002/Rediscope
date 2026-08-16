@@ -1,14 +1,15 @@
 {
   "name": "rediscope",
-  "version": "1.0.0-beta.1",
-  "description": "Redis persistence and runtime inspection toolkit",
+  "version": "1.0.0",
+  "description": "Interactive byte-level Redis RDB binary decompiler and visual state inspector",
   "bin": {
     "rediscope": "bin/rediscope.js"
   },
   "scripts": {
     "build": "go build -buildvcs=false -o dist/rediscope ./cmd/rediscope",
     "test": "go test ./...",
-    "prepack": "npm run build",
+    "prepack": "cp README.npm.md README.md && npm run build",
+    "postpack": "cp README.github.md README.md",
     "pack:local": "npm pack"
   },
   "files": [
@@ -16,14 +17,18 @@
     "dist/",
     "prebuilds/",
     "README.md",
+    "!README.npm.md",
+    "!README.github.md",
     "LICENSE"
   ],
   "keywords": [
     "redis",
     "rdb",
+    "decompiler",
     "debugging",
     "persistence",
-    "byte-viewer"
+    "byte-viewer",
+    "state-inspector"
   ],
   "license": "MIT",
   "engines": {

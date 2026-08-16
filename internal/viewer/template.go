@@ -147,21 +147,55 @@ const htmlTemplate = `<!doctype html>
     }
 
     .tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       border: 2px solid var(--line);
       border-bottom: 0;
       border-radius: 7px 7px 0 0;
       background: #f5f6f3;
-      min-width: 132px;
-      max-width: 220px;
+      min-width: 120px;
+      max-width: 240px;
       height: 36px;
-      padding: 0 12px;
+      padding: 0 6px 0 12px;
       cursor: pointer;
       color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      user-select: none;
+      transition: background 0.1s ease;
+    }
+
+    .tab-title {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-size: 13px;
-      font-weight: 700;
+      flex: 1;
+      text-align: left;
+    }
+
+    .tab-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+      margin: 0;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+
+    .tab-close:hover {
+      background: rgba(0, 0, 0, 0.12);
+      color: #d9383a;
     }
 
     .tab.active {
@@ -775,23 +809,75 @@ const htmlTemplate = `<!doctype html>
       });
     }
 
+    function closeFileTab(e, fileId) {
+      if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      const idx = openFileIds.indexOf(fileId);
+      if (idx === -1) return;
+      openFileIds.splice(idx, 1);
+
+      if (activeFile && activeFile.id === fileId) {
+        if (openFileIds.length > 0) {
+          const nextIdx = Math.min(idx, openFileIds.length - 1);
+          const nextFile = files.find((item) => item.id === openFileIds[nextIdx]);
+          if (nextFile) {
+            openFile(nextFile);
+            return;
+          }
+        } else {
+          activeFile = null;
+          activeRecord = null;
+        }
+      }
+      render();
+    }
+
     function renderTabs() {
       tabs.innerHTML = "";
       openFileIds.forEach((id) => {
         const file = files.find((item) => item.id === id);
         if (!file) return;
-        const tab = document.createElement("button");
+        const tab = document.createElement("div");
         tab.className = "tab";
-        tab.type = "button";
-        tab.textContent = file.name;
+        tab.setAttribute("role", "tab");
+        tab.setAttribute("tabindex", "0");
         tab.classList.toggle("active", activeFile && file.id === activeFile.id);
+
+        const titleSpan = document.createElement("span");
+        titleSpan.className = "tab-title";
+        titleSpan.textContent = file.name;
+
+        const closeBtn = document.createElement("button");
+        closeBtn.className = "tab-close";
+        closeBtn.type = "button";
+        closeBtn.innerHTML = "&times;";
+        closeBtn.title = "Close " + file.name;
+        closeBtn.setAttribute("aria-label", "Close tab " + file.name);
+        closeBtn.addEventListener("click", (e) => closeFileTab(e, file.id));
+
+        tab.appendChild(titleSpan);
+        tab.appendChild(closeBtn);
         tab.addEventListener("click", () => openFile(file));
+        tab.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            openFile(file);
+          } else if (e.key === "Delete" || e.key === "Backspace") {
+            closeFileTab(e, file.id);
+          }
+        });
         tabs.appendChild(tab);
       });
     }
 
     function renderRecords() {
-      if (!activeFile) return;
+      if (!activeFile) {
+        fileTitle.textContent = "No open files";
+        fileStats.innerHTML = "";
+        recordGroups.innerHTML = '<div style="padding:48px 24px; text-align:center; color:var(--muted); font-size:14px;">All file tabs closed. Click any file in the left sidebar to open it.</div>';
+        return;
+      }
       fileTitle.textContent = activeFile.name;
       fileStats.innerHTML = "";
       [activeFile.version, activeFile.bytes + "B", activeFile.countLabel].forEach((text) => {
@@ -887,7 +973,13 @@ const htmlTemplate = `<!doctype html>
       spanByOffset = new Map();
       byteNodes = [];
       focusedNodes = [];
-      if (!activeFile || !activeFile.hex) return;
+      if (!activeFile || !activeFile.hex) {
+        byteGrid.innerHTML = '<div style="padding:48px 24px; text-align:center; color:var(--muted); font-size:13px;">No active file.</div>';
+        activeTitle.textContent = "-";
+        activeSummary.textContent = "No active file.";
+        activeRange.textContent = "";
+        return;
+      }
 
       const records = allRecords(activeFile);
       records.forEach((record) => {
