@@ -6,7 +6,58 @@
 [![npm version](https://img.shields.io/npm/v/rediscope.svg)](https://www.npmjs.com/package/rediscope)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**Rediscope** provides deep, byte-level observability into Redis persistence formats and runtime memory state. It is designed to make low-level binary state transitions, memory encodings, and opcode layouts human-understandable.
+## Why Rediscope Exists
+ 
+As code generation becomes cheaper and more prevalent, **understanding what generated code actually does becomes more valuable**. 
+ 
+Redis persistence format is opaque to most developers. You can read a `.rdb` file as raw bytes, but *why* are they arranged that way? What encoding did Redis use? Where does the key end and the value begin? What does the memory layout actually look like?
+ 
+**Rediscope makes low-level distributed state legible.**
+ 
+It's the first tool in a larger infrastructure ecosystem for real-time, byte-level observability across distributed systems. Future versions extend this to live memory introspection, physical pointer tracing, and binary analysis across Redis, Docker, Kafka, and similar infrastructure.
+ 
+### The Problem Statement
+ 
+When debugging Redis:
+- ❌ `redis-cli KEYS` shows you logical keys, not memory layout
+- ❌ `DEBUG OBJECT` shows object stats, not the actual binary encoding
+- ❌ RDB snapshots exist, but are unreadable without low-level reverse engineering
+- ❌ Memory leaks, encoding mismatches, and type corruption are invisible
+- ❌ No way to understand the exact memory impact of a single operation
+**Rediscope closes that gap.** It lets you inspect:
+- **What's on disk**: Exact byte layout of serialized Redis snapshots
+- **What's in memory**: Physical C struct pointers and allocation patterns
+- **What changed**: Temporal diffs between snapshots (T₀ ↔ T₁)
+- **Why it matters**: Cross-view sync showing the logical→physical transformation of every operation
+---
+ 
+## Multi-Tier Observability: The Vision
+ 
+Rediscope is structured as three layers of increasing depth:
+ 
+### **Tier 1: Static Decompiler (v1.0 - Current)**
+Parse offline `.rdb` snapshots and display their exact binary structure.
+- ✅ Interactive byte-matrix inspection
+- ✅ Record-to-byte synchronization
+- ✅ Metadata and type introspection
+- ✅ Cross-platform, zero dependencies
+### **Namespace Hierarchy & Live Command Stream (v2.0 - In-development)**
+- Tiered, prefix-tree namespace exploration (`users:` → `profile:` → leaf keys)
+- Real-time `MONITOR` protocol listener with microsecond latency metrics
+- Visual AOF-style command aggregation
+### **Tier 2: Serialized State Polling (v3.0 - Planned)**
+Live Redis state without triggering `SAVE` / `BGSAVE`.
+- Polled serialized format resembling RDB layout
+- No persistence overhead
+- Real-time key monitoring
+- Delta compression between polls
+### **Tier 3: Physical Memory Introspection (v4.0 - Planned)**
+Direct observation of Redis's in-memory C structures.
+- GDB/tracing integration for live pointer chasing
+- `dbDict` hash table bucket visualization
+- `sds` string allocation patterns
+- `listpack` and `ziplist` internal structure
+- Physical memory address correlation
 
 ---
 
