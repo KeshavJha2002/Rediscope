@@ -154,4 +154,4 @@ npm pack --dry-run
 
 ## License
 
-MIT © Google DeepMind
+MIT License

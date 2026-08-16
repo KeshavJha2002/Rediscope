@@ -176,4 +176,4 @@ Rediscope supports all major Redis versions and RDB formats from legacy Redis 6.
 
 ## License
 
-MIT © Google DeepMind
+MIT License
