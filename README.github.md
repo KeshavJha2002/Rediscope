@@ -38,7 +38,7 @@ rediscope rdb <path/file_name>.rdb
 
 ### Prerequisites
 - **Go**: 1.22+ installed
-- **Node.js**: 18+ installed
+- **Node.js**: 20+ (Node 24 recommended) installed
 
 ### Setup Steps
 
