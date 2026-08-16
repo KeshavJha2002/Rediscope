@@ -211,13 +211,30 @@ func ResolveFilePatterns(patterns []string) (resolved []string, err error) {
 		}
 
 		// 3. Regex / Directory pattern matching
-		dir := filepath.Dir(pattern)
-		base := filepath.Base(pattern)
+		searchDir := "."
+		base := pattern
 
-		searchDir := dir
-		if _, err := os.Stat(searchDir); err != nil {
-			searchDir = "."
-			base = pattern
+		// Find longest existing parent directory
+		d := pattern
+		for {
+			parent := filepath.Dir(d)
+			if parent == d || parent == "." || parent == "" {
+				if info, err := os.Stat(d); err == nil && info.IsDir() {
+					searchDir = d
+					base = strings.TrimPrefix(pattern, d)
+					base = strings.TrimPrefix(base, string(filepath.Separator))
+					base = strings.TrimPrefix(base, "/")
+				}
+				break
+			}
+			if info, err := os.Stat(parent); err == nil && info.IsDir() {
+				searchDir = parent
+				base = strings.TrimPrefix(pattern, parent)
+				base = strings.TrimPrefix(base, string(filepath.Separator))
+				base = strings.TrimPrefix(base, "/")
+				break
+			}
+			d = parent
 		}
 
 		// Try compiling directly as regex or convert glob wildcards
