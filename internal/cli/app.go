@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"rediscope/internal/rdb"
+	"rediscope/internal/tui"
 	"rediscope/internal/viewer"
 )
 
@@ -35,6 +36,8 @@ func (a *App) Run(args []string) (err error) {
 	}
 
 	switch args[0] {
+	case "tui":
+		return a.runTUI(args[1:])
 	case "rdb":
 		return a.runRDB(args[1:])
 	case "version", "-v", "--version":
@@ -47,6 +50,39 @@ func (a *App) Run(args []string) (err error) {
 		a.usage()
 		return fmt.Errorf("unknown command %q", args[0])
 	}
+}
+
+func (a *App) runTUI(args []string) error {
+	tuiApp := tui.NewApp()
+
+	// Parse flags for TUI customization if provided
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--render-only", "--dry-run":
+			rows, cols := tui.GetTerminalSize()
+			fmt.Println(tuiApp.RenderToString(cols, rows))
+			return nil
+		case "--source", "-s":
+			if i+1 < len(args) {
+				tuiApp.State.Source = args[i+1]
+				i++
+			}
+		case "--redis-version":
+			if i+1 < len(args) {
+				tuiApp.State.RedisVersion = args[i+1]
+				i++
+			}
+		case "--poll", "-p":
+			if i+1 < len(args) {
+				if p, err := strconv.ParseFloat(args[i+1], 64); err == nil && p > 0 {
+					tuiApp.State.PollPeriod = p
+				}
+				i++
+			}
+		}
+	}
+
+	return tuiApp.Run()
 }
 
 func (a *App) runRDB(args []string) (err error) {
@@ -294,6 +330,7 @@ func ResolveFilePatterns(patterns []string) (resolved []string, err error) {
 
 func (a *App) usage() {
 	fmt.Fprintln(os.Stderr, "Usage:")
+	fmt.Fprintln(os.Stderr, "  rediscope tui [--source host:port] [--poll interval] [--render-only]")
 	fmt.Fprintln(os.Stderr, "  rediscope rdb <file-or-pattern> [more-patterns ...] [--out dir] [--port port] [--no-open] [--no-serve]")
 	fmt.Fprintln(os.Stderr, "  rediscope version")
 }
